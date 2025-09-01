@@ -30,33 +30,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Token");
-        String token = null;
 
         if (header != null && header.startsWith("Bearer ")) {
-            token = header.substring(7);
-        }
-        else {
-            sendJsonErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid JWT Auth");
-            return;
-        }
+            String token = header.substring(7);
 
-        if (token != null && tokenProvider.validateToken(token)) {
-            String email = tokenProvider.getEmailFromToken(token);
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+            if (tokenProvider.validateToken(token)) {
+                String email = tokenProvider.getEmailFromToken(token);
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        }
-        else
-        {
-            sendJsonErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT Auth credentials");
-            return;
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                sendJsonErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT Auth credentials");
+                return;
+            }
         }
 
         filterChain.doFilter(request, response);
     }
+
     private void sendJsonErrorResponse(HttpServletResponse response, int statusCode, String message) throws IOException {
         response.setStatus(statusCode);
         response.setContentType("application/json");
